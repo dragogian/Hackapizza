@@ -3,6 +3,7 @@ from getpass import getpass
 
 from dotenv import load_dotenv
 from langchain_ibm import ChatWatsonx
+from langchain_openai import ChatOpenAI
 
 load_dotenv()
 watsonx_api_key = getpass()
@@ -14,17 +15,19 @@ os.environ["WATSONX_APIKEY"] = watsonx_api_key
 # os.environ["WATSONX_USERNAME"] = "your username for accessing the CPD cluster"
 # os.environ["WATSONX_INSTANCE_ID"] = "your instance_id for accessing the CPD cluster"
 
-parameters = {
-    "temperature": 0,
-    "max_tokens": 20000,
-}
+llm = ChatOpenAI("gpt-4o", temperature=0)
 
-chat = ChatWatsonx(
-    model_id="ibm/granite-34b-code-instruct",
-    url="https://us-south.ml.cloud.ibm.com",
-    project_id="PASTE YOUR PROJECT_ID HERE",
-    params=parameters,
-)
+# parameters = {
+#     "temperature": 0,
+#     "max_tokens": 20000,
+# }
+#
+# chat = ChatWatsonx(
+#     model_id="ibm/granite-34b-code-instruct",
+#     url="https://us-south.ml.cloud.ibm.com",
+#     project_id="PASTE YOUR PROJECT_ID HERE",
+#     params=parameters,
+# )
 
 # CLOUD PAK VERSION
 # chat = ChatWatsonx(
