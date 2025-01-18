@@ -6,8 +6,8 @@ from langchain_ibm import ChatWatsonx
 from langchain_openai import ChatOpenAI
 
 load_dotenv()
-watsonx_api_key = getpass()
-os.environ["WATSONX_APIKEY"] = watsonx_api_key
+# watsonx_api_key = getpass()
+# os.environ["WATSONX_APIKEY"] = watsonx_api_key
 
 # os.environ["WATSONX_URL"] = "your service instance url"
 # os.environ["WATSONX_TOKEN"] = "your token for accessing the CPD cluster"
