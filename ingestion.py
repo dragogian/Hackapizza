@@ -4,6 +4,7 @@ from langchain_community.graphs import Neo4jGraph
 from langchain_community.graphs.graph_document import GraphDocument
 from langchain_core.documents import Document
 from langchain_experimental.graph_transformers import LLMGraphTransformer
+from neo4j.exceptions import ClientError
 
 from llm import llm
 
@@ -141,6 +142,12 @@ async def create_knowledge_graph_schema(docs: list[Document]) -> list[GraphDocum
     return await graph_transformer.aconvert_to_graph_documents(docs)
 
 def create_knowledge_graph(docs: list[GraphDocument]) -> None:
-    graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
+    try:
+        graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
+    except ClientError as e:
+        # Inizializza la connessione al database Neo4j
+        base_graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password)
+        base_graph_db.query(f"CREATE DATABASE PROJECT{kg_db_name}")
+        graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
     graph_db.add_graph_documents(docs)
     return

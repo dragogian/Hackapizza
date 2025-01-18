@@ -20,10 +20,14 @@ async def main():
         print(f"Loading documents from pickle file...")
         docs = pickle.load(open("docs_v2.pickle", "rb"))
     print(f"Creating knowledge graph schema with loaded documents...")
-    schema = await create_knowledge_graph_schema(docs)
-    with open("schema.pickle", "wb") as f:
-        pickle.dump(schema, f)
-    print(f"Creating knowledge graph with schema: \n {schema} \n")
+    if not os.path.exists("schema.pickle"):
+        schema = await create_knowledge_graph_schema(docs)
+        with open("schema.pickle", "wb") as f:
+            pickle.dump(schema, f)
+        print(f"Creating knowledge graph with schema: \n {schema} \n")
+    else:
+        print(f"Loading schema from pickle file...")
+        schema = pickle.load(open("schema.pickle", "rb"))
     create_knowledge_graph(schema)
 
 if __name__ == "__main__":
