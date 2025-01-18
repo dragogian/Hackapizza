@@ -16,7 +16,7 @@ from pdf_cleaner import clean_pdf
 kg_url = "neo4j://localhost:7687"
 kg_username = "neo4j"
 kg_password = "password"
-kg_db_name = "hackapizzafinal"
+kg_db_name = "hackapizzaentire2"
 
 load_dotenv()
 graph_params = {
@@ -31,23 +31,23 @@ graph_params = {
     "Ordine"
   ],
   "allowed_relationships": [
-    "(Piatto, CONTIENE_INGREDIENTE, Ingrediente)",
-    "(Piatto, APPLICA_TECNICA, Tecnica)",
-    "(Piatto, SERVITO_IN, Ristorante)",
-    "(Ristorante, LOCALIZZATO_SU, Pianeta)",
-    "(Piatto, PREPARATO_DA, Chef)",
-    "(Chef, HA_LICENZA, Licenza)",
-    "(Chef, APPARTIENE_ORDINE, Ordine)",
-    "(Ordine, ORDINE_AUTORIZZA, Piatto)"
+    ("Piatto", "CONTIENE_INGREDIENTE", "Ingrediente"),
+    ("Piatto", "APPLICA_TECNICA", "Tecnica"),
+    ("Piatto", "SERVITO_IN", "Ristorante"),
+    ("Ristorante", "LOCALIZZATO_SU", "Pianeta"),
+    ("Piatto", "PREPARATO_DA", "Chef"),
+    ("Chef", "HA_LICENZA", "Licenza"),
+    ("Chef", "APPARTIENE_ORDINE", "Ordine"),
+    ("Ordine", "ORDINE_AUTORIZZA", "Piatto")
   ],
   "node_properties": [
     "coordinate",
     "descrizione",
-    "livelloLicenza",
-    "tipoLicenza",
-    "specializzazioneChef",
-    "categoriaPianeta",
-    "capienzaRistorante",
+    "livelloLICENZA",
+    "tipoLICENZA",
+    "specializzazioneCHEF",
+    "categoriaPIANETA",
+    "capienzaRISTORANTE",
     "flagLeggendario"
   ],
   "relationship_properties": [
@@ -64,7 +64,7 @@ graph_params = {
 
 # graph_params = {
 #   "allowed_nodes": [
-#     "Piatto",
+#     "PIATTO",
 #     "INGREDIENTE",
 #     "TECNICA",
 #     "RISTORANTE",
@@ -74,9 +74,9 @@ graph_params = {
 #     "ORDINE"
 #   ],
 #   "allowed_relationship": [
-#     ("Piatto", "CONTIENTE_INGREDIENTE", "INGREDIENTE"),
-#     ("Piatto", "USA_TECNICA", "TECNICA"),
-#     ("Piatto", "SERVITO_IN", "RISTORANTE"),
+#     ("PIATTO", "CONTIENTE_INGREDIENTE", "INGREDIENTE"),
+#     ("PIATTO", "USA_TECNICA", "TECNICA"),
+#     ("PIATTO", "SERVITO_IN", "RISTORANTE"),
 #     ("RISTORANTE", "SI_TROVA_SU", "PIANETA"),
 #     ("TECNICA", "RICHIEDE_LICENZA", "LICENZA"),
 #     ("CHEF", "HA_LICENZA", "LICENZA"),
@@ -87,7 +87,7 @@ graph_params = {
 #     "nome",
 #     "descrizione",
 #     "eLeggendario",
-#     "gradoChefRichiesto",
+#     "gradoCHEFRichiesto",
 #     "quantitaMassimaConsentita",
 #     "esotico",
 #     "multiDimensionale",
@@ -96,17 +96,17 @@ graph_params = {
 #     "licenzaRichiesta",
 #     "fonteEnergia",
 #     "eMultiReale",
-#     "livelloLicenzaChef",
+#     "livelloLICENZACHEF",
 #     "distanzaDaRiferimento",
 #     "coordinateGalattiche",
 #     "regioneGalattica",
 #     "coordinate",
 #     "livelloDimensionale",
-#     "licenzeChef",
-#     "appartenenzaOrdine",
+#     "licenzeCHEF",
+#     "appartenenzaORDINE",
 #     "specializzazioni",
-#     "tipoLicenza",
-#     "gradoLicenza",
+#     "tipoLICENZA",
+#     "gradoLICENZA",
 #     "licenzaTemporale",
 #     "licenzaPsionica",
 #     "requisitiIngresso"
@@ -116,7 +116,7 @@ graph_params = {
 #     "unitaDiMisura",
 #     "ingredienteFondamentale",
 #     "conformeCodiceGalattico",
-#     "chefConLicenzaAdeguata",
+#     "chefConLICENZAAdeguata",
 #     "attrezzaturaSpeciale",
 #     "livelloEsecuzione",
 #     "disponibilitaStagionale",
@@ -126,7 +126,7 @@ graph_params = {
 #     "accessibilita",
 #     "allineamentoDimensionale",
 #     "gradoMinimo",
-#     "tipoLicenzaSpecifico",
+#     "tipoLICENZASpecifico",
 #     "motivazione",
 #     "gradoPosseduto",
 #     "dataConseguimento",

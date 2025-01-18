@@ -10,8 +10,8 @@ pdf_file = "resources_cleaned/Anima Cosmica_cleaned.pdf"
 
 def estrai_paragrafi(file_pdf):
     """
-    Estrae i piatti, ingredienti e tecniche da un PDF.
-    Restituisce una lista di stringhe, una per ogni piatto.
+    Estrae l'introduzione e i paragrafi relativi ai piatti da un PDF.
+    Restituisce una lista di stringhe, una per l'introduzione e una per ogni piatto.
     """
     paragrafi = []
 
@@ -25,41 +25,62 @@ def estrai_paragrafi(file_pdf):
         with pdfplumber.open(file_path) as pdf:
             testo_completo = ""
             for pagina in pdf.pages:
-                testo_pagina = pagina.extract_text()
-                if testo_pagina:
-                    testo_completo += testo_pagina + "\n"
+                # Raggruppa caratteri in righe basate su 'top' e 'x'
+                chars = pagina.chars
+                lines = {}
+                for char in chars:
+                    line_top = round(char['top'])  # Round to avoid minor differences
+                    if line_top not in lines:
+                        lines[line_top] = []
+                    lines[line_top].append(char)
 
-            # Verifica che il testo estratto non sia vuoto
-            if not testo_completo.strip():
-                print("Errore: Il PDF non contiene testo leggibile.")
-                return paragrafi
+                # Ricostruisci le righe ordinate per posizione 'x'
+                for top in sorted(lines.keys()):
+                    line_chars = sorted(lines[top], key=lambda c: c['x'])
+                    line_text = ''.join(c['text'] for c in line_chars)
+                    testo_completo += line_text + "\n"
 
-            print("Testo estratto dal PDF con successo.")
+            # Debug: Mostra l'anteprima del testo ricostruito
+            print("Testo ricostruito:\n", testo_completo[:500])
 
-        # Trova i blocchi di testo che corrispondono ai piatti
+        # Estrarre l'introduzione
+        introduzione_match = re.search(
+            r'(Ristorante .*? Chef .*?)(?=\nMenu)',
+            testo_completo,
+            re.DOTALL
+        )
+        introduzione_testo = ""
+        if introduzione_match:
+            introduzione_testo = introduzione_match.group(1).strip()
+            paragrafi.append(f"Introduzione:\n\n{introduzione_testo}")
+            print("Introduzione trovata.")
+        else:
+            print("Avviso: Introduzione non trovata nel testo estratto.")
+
+        # Estrarre i piatti con ingredienti e tecniche
         pattern_piatto = re.compile(
-            r'(?P<titolo>^[^\n]+?)\n+Ingredienti:?\n(?P<ingredienti>.+?)\n+Tecniche:?\n(?P<tecniche>.+?)(?=\n[^\n]|\Z)',
-            re.DOTALL | re.MULTILINE
+            r'(?<=Menu)\n+([^\\n]+)\n+Ingredienti:\n((?:[^\n]+\n?)+?)\n+Tecniche:\n((?:[^\n]+\n?)+?)',
+            re.DOTALL
         )
         matches = pattern_piatto.finditer(testo_completo)
 
         for match in matches:
-            titolo = match.group("titolo").strip()
-            ingredienti = match.group("ingredienti").strip()
-            tecniche = match.group("tecniche").strip()
+            titolo = match.group(1).strip()
+            ingredienti = match.group(2).strip()
+            tecniche = match.group(3).strip()
 
-            # Costruisco il paragrafo
             paragrafo = (
+                f"{introduzione_testo}\n\n"
                 f"Titolo: {titolo}\n\n"
                 f"Ingredienti:\n{ingredienti}\n\n"
                 f"Tecniche:\n{tecniche}"
             )
             paragrafi.append(paragrafo)
 
-        if not paragrafi:
-            print("Errore: Nessun piatto trovato.")
+        if len(paragrafi) <= 1:
+            print("Errore: Nessun piatto trovato. Verifica il formato del PDF e le regex.")
         else:
-            print(f"Trovati {len(paragrafi)} paragrafi di piatti.")
+            print(f"Trovati {len(paragrafi) - 1} paragrafi di piatti (esclusa l'introduzione).")
 
     except Exception as e:
         print(f"Errore durante l'estrazione del testo: {e}")

@@ -27,7 +27,7 @@ load_dotenv()
 # os.environ["WATSONX_USERNAME"] = "your username for accessing the CPD cluster"
 # os.environ["WATSONX_INSTANCE_ID"] = "your instance_id for accessing the CPD cluster"
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 #llm = init_chat_model("o1-mini", model_provider="openai", temperature=0)
 # parameters = {
 #     "temperature": 0,
