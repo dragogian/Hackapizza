@@ -115,6 +115,7 @@ graph_params = {
 
 
 def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
+    file = "resources/" + file
     if file.endswith(".txt") or file.endswith(".md"):
         loader = TextLoader(file)
         docs.extend(loader.load_and_split())
