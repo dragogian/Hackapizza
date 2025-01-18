@@ -3,7 +3,7 @@ from langchain_core.documents import Document
 
 
 def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
-    if file.endswith(".txt"):
+    if file.endswith(".txt") or file.endswith(".md"):
         loader = TextLoader(file)
         docs.extend(loader.load_and_split())
     elif file.endswith(".json"):
