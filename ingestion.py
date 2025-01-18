@@ -1,3 +1,5 @@
+import os.path
+
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader, CSVLoader, JSONLoader, TextLoader, UnstructuredHTMLLoader
 from langchain_community.graphs import Neo4jGraph
@@ -7,6 +9,7 @@ from langchain_experimental.graph_transformers import LLMGraphTransformer
 from neo4j.exceptions import ClientError
 
 from llm import llm
+from pdf_cleaner import clean_pdf
 
 kg_url = "neo4j://localhost:7687"
 kg_username = "neo4j"
@@ -127,7 +130,10 @@ def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
         loader = CSVLoader(file)
         docs.extend(loader.load_and_split())
     elif file.endswith(".pdf"):
-        loader = PyPDFLoader(file, extract_images=True)
+        basename = os.path.basename(file).split(".")[0]
+        cleaned_pdf = "resources_cleaned/" + basename + "_cleaned.pdf"
+        clean_pdf(file, "resources_cleaned/" + basename + "_cleaned.pdf")
+        loader = PyPDFLoader(cleaned_pdf, extract_images=True)
         docs.extend(loader.load_and_split())
     elif file.endswith(".html"):
         loader = UnstructuredHTMLLoader(file)
@@ -145,9 +151,10 @@ def create_knowledge_graph(docs: list[GraphDocument]) -> None:
     try:
         graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
     except ClientError as e:
+        print("Database not found, creating a new one...")
         # Inizializza la connessione al database Neo4j
         base_graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password)
-        base_graph_db.query(f"CREATE DATABASE PROJECT{kg_db_name}")
+        base_graph_db.query(f"CREATE DATABASE {kg_db_name}")
         graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
     graph_db.add_graph_documents(docs)
     return
