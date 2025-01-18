@@ -136,9 +136,9 @@ def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
         return docs
     return docs
 
-def create_knowledge_graph_schema(docs: list[Document]) -> list[GraphDocument]:
+async def create_knowledge_graph_schema(docs: list[Document]) -> list[GraphDocument]:
     graph_transformer = LLMGraphTransformer(llm=llm, allowed_nodes=graph_params["allowed_nodes"], allowed_relationships=graph_params["allowed_relationship"], node_properties=True, relationship_properties=True)
-    return graph_transformer.convert_to_graph_documents(docs)
+    return await graph_transformer.aconvert_to_graph_documents(docs)
 
 def create_knowledge_graph(docs: list[GraphDocument]) -> None:
     graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
