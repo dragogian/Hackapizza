@@ -105,7 +105,7 @@ def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
         docs.extend(loader.load())
     elif file.endswith(".pdf"):
         basename = os.path.basename(file).split(".")[0]
-        cleaned_pdf = "resources_cleaned/" + basename
+        cleaned_pdf = "resources_cleaned/" + basename + ".pdf"
         #clean_pdf(file, "resources_cleaned/" + basename + "_cleaned.pdf")
         loader = PyPDFLoader(cleaned_pdf, extract_images=True)
         docs.extend(loader.load_and_split())
