@@ -14,7 +14,7 @@ from pdf_cleaner import clean_pdf
 kg_url = "neo4j://localhost:7687"
 kg_username = "neo4j"
 kg_password = "password"
-kg_db_name = "hackapizza"
+kg_db_name = "hackapizza_full"
 
 load_dotenv()
 graph_params = {
@@ -128,7 +128,7 @@ def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
     #     docs.extend(loader.load_and_split())
     elif file.endswith(".csv"):
         loader = CSVLoader(file)
-        docs.extend(loader.load_and_split())
+        docs.extend(loader.load())
     elif file.endswith(".pdf"):
         basename = os.path.basename(file).split(".")[0]
         cleaned_pdf = "resources_cleaned/" + basename + "_cleaned.pdf"

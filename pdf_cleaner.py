@@ -20,7 +20,3 @@ def clean_pdf(input_pdf: str, output_pdf: str):
         pdf.save(output_pdf)
 
     print("PDF salvato senza immagini in:", output_pdf)
-
-    # Rimuove il file PDF di input
-    os.remove(input_pdf)
-    print(f"File di input {input_pdf} rimosso.")
