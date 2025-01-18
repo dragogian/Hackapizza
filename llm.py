@@ -2,6 +2,7 @@ import os
 from getpass import getpass
 
 from dotenv import load_dotenv
+from langchain.chat_models import init_chat_model
 from langchain_ibm import ChatWatsonx
 from langchain_openai import ChatOpenAI
 
@@ -15,8 +16,8 @@ load_dotenv()
 # os.environ["WATSONX_USERNAME"] = "your username for accessing the CPD cluster"
 # os.environ["WATSONX_INSTANCE_ID"] = "your instance_id for accessing the CPD cluster"
 
-llm = ChatOpenAI("gpt-4o", temperature=0)
-
+#llm = ChatOpenAI(model="gpt-4o")
+llm = init_chat_model("gpt-4o", model_provider="openai", temperature=0)
 # parameters = {
 #     "temperature": 0,
 #     "max_tokens": 20000,
