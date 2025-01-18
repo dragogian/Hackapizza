@@ -56,83 +56,83 @@ llm = init_chat_model("gpt-4o", model_provider="openai", temperature=0)
 # )
 
 # Extract entities from text
-class Entities(BaseModel):
-    """Identifying information about entities."""
-
-    names: List[str] = Field(
-        ...,
-        description="All the person, organization, or business entities that "
-        "appear in the text",
-    )
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are extracting organization and person entities from the text.",
-        ),
-        (
-            "human",
-            "Use the given format to extract information from the following "
-            "input: {question}",
-        ),
-    ]
-)
-
-entity_chain = prompt | llm.with_structured_output(Entities)
-
-# Fulltext index query
-def structured_retriever(question: str) -> str:
-    """
-    Collects the neighborhood of entities mentioned
-    in the question
-    """
-    result = ""
-    entities = entity_chain.invoke({"question": question})
-    for entity in entities.names:
-        response = graph.query(
-            """CALL db.index.fulltext.queryNodes('entity', $query, {limit:2})
-            YIELD node,score
-            CALL {
-              MATCH (node)-[r:!MENTIONS]->(neighbor)
-              RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS output
-              UNION
-              MATCH (node)<-[r:!MENTIONS]-(neighbor)
-              RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output
-            }
-            RETURN output LIMIT 50
-            """,
-            {"query": generate_full_text_query(entity)},
-        )
-        result += "\n".join([el['output'] for el in response])
-    return result
-
-def retriever(question: str):
-    print(f"Search query: {question}")
-    structured_data = structured_retriever(question)
-    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
-    final_data = f"""Structured data:
-{structured_data}
-Unstructured data:
-{"#Document ". join(unstructured_data)}
-    """
-    return final_data
-
-template = """Answer the question based only on the following context:
-{context}
-
-Question: {question}
-"""
-prompt = ChatPromptTemplate.from_template(template)
-
-chain = (
-    RunnableParallel(
-        {
-            "context": _search_query | retriever,
-            "question": RunnablePassthrough(),
-        }
-    )
-    | prompt
-    | llm
-    | StrOutputParser()
-)
+# class Entities(BaseModel):
+#     """Identifying information about entities."""
+#
+#     names: List[str] = Field(
+#         ...,
+#         description="All the person, organization, or business entities that "
+#         "appear in the text",
+#     )
+#
+# prompt = ChatPromptTemplate.from_messages(
+#     [
+#         (
+#             "system",
+#             "You are extracting organization and person entities from the text.",
+#         ),
+#         (
+#             "human",
+#             "Use the given format to extract information from the following "
+#             "input: {question}",
+#         ),
+#     ]
+# )
+#
+# entity_chain = prompt | llm.with_structured_output(Entities)
+#
+# # Fulltext index query
+# def structured_retriever(question: str) -> str:
+#     """
+#     Collects the neighborhood of entities mentioned
+#     in the question
+#     """
+#     result = ""
+#     entities = entity_chain.invoke({"question": question})
+#     for entity in entities.names:
+#         response = graph.query(
+#             """CALL db.index.fulltext.queryNodes('entity', $query, {limit:2})
+#             YIELD node,score
+#             CALL {
+#               MATCH (node)-[r:!MENTIONS]->(neighbor)
+#               RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS output
+#               UNION
+#               MATCH (node)<-[r:!MENTIONS]-(neighbor)
+#               RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output
+#             }
+#             RETURN output LIMIT 50
+#             """,
+#             {"query": generate_full_text_query(entity)},
+#         )
+#         result += "\n".join([el['output'] for el in response])
+#     return result
+#
+# def retriever(question: str):
+#     print(f"Search query: {question}")
+#     structured_data = structured_retriever(question)
+#     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
+#     final_data = f"""Structured data:
+# {structured_data}
+# Unstructured data:
+# {"#Document ". join(unstructured_data)}
+#     """
+#     return final_data
+#
+# template = """Answer the question based only on the following context:
+# {context}
+#
+# Question: {question}
+# """
+# prompt = ChatPromptTemplate.from_template(template)
+#
+# chain = (
+#     RunnableParallel(
+#         {
+#             "context": _search_query | retriever,
+#             "question": RunnablePassthrough(),
+#         }
+#     )
+#     | prompt
+#     | llm
+#     | StrOutputParser()
+# )

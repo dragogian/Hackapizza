@@ -10,15 +10,18 @@ load_dotenv()
 
 async def main():
     docs = []
-    if not os.path.exists("docs_v3.pickle"):
+    if not os.path.exists("docs_v4.pickle"):
         for file in os.listdir("resources"):
             print(f"Loading file: {file}")
             load_file_documents_by_format(file, docs)
-            with open("docs_v3.pickle", "wb") as f:
-                pickle.dump(docs, f)
+        for file in os.listdir("resources_cleaned"):
+            print(f"Loading file: {file}")
+            load_file_documents_by_format(file, docs)
+        with open("docs_v4.pickle", "wb") as f:
+            pickle.dump(docs, f)
     else:
         print(f"Loading documents from pickle file...")
-        docs = pickle.load(open("docs_v2.pickle", "rb"))
+        docs = pickle.load(open("docs_v3.pickle", "rb"))
     print(f"Creating knowledge graph schema with loaded documents...")
     if not os.path.exists("schema1.pickle"):
         schema = await create_knowledge_graph_schema(docs)
