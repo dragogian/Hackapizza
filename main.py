@@ -1,4 +1,5 @@
 import os
+import pickle
 
 from dotenv import load_dotenv
 
@@ -8,9 +9,13 @@ load_dotenv()
 
 if __name__ == "__main__":
     docs = []
-    for file in os.listdir("resources"):
-        print(f"Loading file: {file}")
-        load_file_documents_by_format(file, docs)
+    if not os.path.exists("docs_v2.pickle"):
+        for file in os.listdir("resources"):
+            print(f"Loading file: {file}")
+            load_file_documents_by_format(file, docs)
+    else:
+        print(f"Loading documents from pickle file...")
+        docs = pickle.load(open("docs_v2.pickle", "rb"))
     print(f"Creating knowledge graph schema with loaded documents...")
     schema = create_knowledge_graph_schema(docs)
     print(f"Creating knowledge graph with schema: \n {schema} \n")

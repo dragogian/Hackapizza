@@ -119,9 +119,9 @@ def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
     if file.endswith(".txt") or file.endswith(".md"):
         loader = TextLoader(file)
         docs.extend(loader.load_and_split())
-    elif file.endswith(".json"):
-        loader = JSONLoader(file, ".", text_content=False)
-        docs.extend(loader.load_and_split())
+    # elif file.endswith(".json"):
+    #     loader = JSONLoader(file, ".", text_content=False)
+    #     docs.extend(loader.load_and_split())
     elif file.endswith(".csv"):
         loader = CSVLoader(file)
         docs.extend(loader.load_and_split())
@@ -132,11 +132,12 @@ def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
         loader = UnstructuredHTMLLoader(file)
         docs.extend(loader.load_and_split())
     else:
-        raise ValueError(f"File format of {file} not supported")
+        print(f"Unsupported file format: {file}")
+        return docs
     return docs
 
 def create_knowledge_graph_schema(docs: list[Document]) -> list[GraphDocument]:
-    graph_transformer = LLMGraphTransformer(llm=llm, allowed_nodes=graph_params["allowed_nodes"], allowed_relationships=graph_params["allowed_relationship"], node_properties=graph_params["node_properties"], relationship_properties=graph_params["relationship_properties"])
+    graph_transformer = LLMGraphTransformer(llm=llm, allowed_nodes=graph_params["allowed_nodes"], allowed_relationships=graph_params["allowed_relationship"], node_properties=True, relationship_properties=True)
     return graph_transformer.convert_to_graph_documents(docs)
 
 def create_knowledge_graph(docs: list[GraphDocument]) -> None:
