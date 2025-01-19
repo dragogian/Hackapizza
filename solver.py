@@ -5,6 +5,8 @@ from typing import List
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
+from langchain_core.messages.tool import tool_call
+from langchain_core.tools import tool
 from langchain_neo4j import Neo4jGraph
 from langchain_community.vectorstores import Neo4jVector
 from langchain_community.vectorstores.neo4j_vector import SearchType, remove_lucene_chars
@@ -159,41 +161,62 @@ import pandas as pd
 import json
 
 # Read the CSV file without headers
-df = pd.read_csv("domande.csv", header=None, names=["domanda"])
+df = pd.read_csv("domande.csv", header=0, names=["domanda"])
 
 # Create or overwrite the results CSV file with headers
 with open("risultati.csv", "w") as f:
     f.write("row_id,result\n")
+# Load the dish mapping JSON file
+with open("dish_mapping.json", "r") as f:
+    map_json = json.load(f)
+
+map_json_lower = {key.lower(): value for key, value in map_json.items()}
 
 # Iterate over each row in the dataframe
 for index, row in df.iterrows():
-    if index == 0:
-        continue
     input_data = {"question": row["domanda"]}
     output = chain.invoke(input_data)
-
-    # Load the dish mapping JSON file
-    with open("dish_mapping.json", "r") as f:
-        map_json = json.load(f)
 
     # Collect dish IDs
     dish_ids = []
     for dish in output.piatti:
-        map_json[dish] = index  # Assuming 'id' is the column name
-        dish_ids.append(str(index))
-
-    # Save the updated dish mapping JSON file
-    with open("dish_mapping.json", "w") as f:
-        json.dump(map_json, f, indent=4)
-
+        dish_ids.append(str(map_json_lower.get(dish.lower(), "")))
     # Write the result to the results CSV file
     result = ",".join(dish_ids)
     with open("risultati.csv", "a") as f:
         f.write(f"{index},\"{result}\"\n")
-
+    if index == 5:
+        break
 
     # print(output)
 
 # input_data = {"question": "Quali piatti contengono carne di kraken?"}  # Example input
 # output = chain.invoke(input_data)
 # print(output)
+
+@tool
+def get_info_from_knowledge_graph(question: str):
+    """
+    This tool retrieves information from the knowledge graph based on a user question
+    and returns the result in a structured format
+
+    Args:
+        ''question'': The user question to be answered
+    """
+    return structured_retriever(question)
+
+final_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are a helpful assistant that can provide information from the knowledge graph."
+            "Use the get_info_from_knowledge_graph tool to solve the queries. Always remember to write case insensitive Cypher queries.!"
+        ),
+        (
+            "human",
+            "If you are not able to solve the query, answer with an empty list."
+        ),
+    ]
+)
+
+retrieval_chain = final_prompt | llm.with_structured_output(Response)
