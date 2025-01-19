@@ -162,10 +162,14 @@ final_prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a helpful assistant that can provide information from the knowledge graph."
-            "Think and generate a plan to retrieve informations from knowledge graph, then use the get_info_from_knowledge_graph tool to solve the queries!"
-            "If you are not able to solve the query, answer with an empty list."
-            "ANSWER WITH ONLY THE RESULTS!"
+            "You are a helpful assistant very good at understanding user needs and generating plans to solve user queries."
+            "Your task is to analyze the user query and generate a plan to solve the user query based on the context provided."
+            "The plan should actually be made of a simple list of queries to run on the knowledge graph to obtain the final result"
+            "You have access to a graph with the following informations:"
+            "Node Labels: {labels}"
+            "Relationships: {relationships}"
+            "Node properties: {properties}"
+            "ANSWER WITH ONLY THE QUERIES AND DO NOT INVENT ANYTHING!"
         ),
         (
             "human",
@@ -191,20 +195,22 @@ def get_info_from_knowledge_graph(question: str):
     Args:
         ''question'': The user question to be answered
     """
-    try:
-        structured_output = structured_retriever(question)
-    except Exception as e:
-        structured_output = []
-    try:
-        unstructured_output = unstructured_retriever.invoke(question)
-    except Exception as e:
-        unstructured_output = []
+    structured_output = structured_retriever(question)
+
+    unstructured_output = unstructured_retriever.invoke(question)
+
     return {
         "response_from_knowledge_graph": structured_output,
         "response_from_vector_db": unstructured_output
     }
-agent = create_tool_calling_agent(llm, tools=[get_info_from_knowledge_graph], prompt=final_prompt)
-executor = AgentExecutor(agent=agent, tools=[get_info_from_knowledge_graph])
+class Plan(BaseModel):
+    """A plan to solve the user query."""
+
+    queries: List[str] = Field(
+        ...,
+        description="The list of Cypher queries to solve the user query",
+    )
+plan_chain = final_prompt | llm.with_structured_output(Plan)
 answer_generator_chain = ChatPromptTemplate.from_messages(
     [
         (
@@ -216,9 +222,10 @@ answer_generator_chain = ChatPromptTemplate.from_messages(
             "human",
             "Given the following question:"
             "<question>{question}</question>"
-            "And the following results from the knowledge graph:"
+            "Analyze generated queries and relative results:"
+            "<queries>{queries}</queries>"
             "<results>{results}</results>"
-            "Provide a final answer to the user."
+            "and finally, provide a final answer to the user."
         )
     ]
 ) | llm.with_structured_output(Response)
@@ -230,7 +237,7 @@ import json
 df = pd.read_csv("domande.csv", header=0, names=["domanda"])
 
 # Create or overwrite the results CSV file with headers
-with open("risultati1.csv", "w") as f:
+with open("risultati3_3.csv", "w") as f:
     f.write("row_id,result\n")
 # Load the dish mapping JSON file
 with open("dish_mapping.json", "r") as f:
@@ -240,9 +247,16 @@ map_json_lower = {key.lower(): value for key, value in map_json.items()}
 
 # Iterate over each row in the dataframe
 for index, row in df.iterrows():
-    input_data = {"question": row["domanda"], "messages": []}
-    output_ = executor.invoke(input_data)
-    output = answer_generator_chain.invoke({"results": output_, "question": row["domanda"]})
+    input_data = {"question": row["domanda"], "labels": graph_params["allowed_nodes"], "relationships": graph_params["allowed_relationships"], "properties": graph_params["node_properties"]}
+    plan = plan_chain.invoke(input_data)
+    answers = []
+    for query in plan.queries:
+        try:
+            query_result = graph_db.query(query)
+            answers.append(query_result)
+        except Exception as e:
+            print(f"Error executing query: {query}")
+    output = answer_generator_chain.invoke({"queries": plan.queries, "results": answers, "question": row["domanda"]})
 
     # Collect dish IDs
     dish_ids = []
@@ -252,7 +266,7 @@ for index, row in df.iterrows():
             dish_ids.append(dish_id)
     # Write the result to the results CSV file
     result = ",".join(dish_ids)
-    with open("risultati1.csv", "a") as f:
+    with open("risultati3_3.csv", "a") as f:
         f.write(f"{index},\"{result}\"\n")
 
     # print(output)

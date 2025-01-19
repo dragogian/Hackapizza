@@ -1,8 +1,12 @@
+import os
 from typing import List, Any
 
 import numpy as np
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS, Chroma
+from langchain_core.documents import Document
+
+from ingestion import load_file_documents_by_format
 
 
 def remove_element_from_index(
@@ -60,7 +64,7 @@ class BlueVectorDatabase:
         self.pages = []
 
     def create_vector_db(self,
-                         urls: List[str],
+                         urls: List[Document],
                          embedding_model,
                          index_path: str = "default",
                          vector_db_type: str = "FAISS",
@@ -81,10 +85,7 @@ class BlueVectorDatabase:
 
         print(f"Creating new {vector_db_type} vector store...")
 
-        for url in urls:
-            loaders = PyPDFLoader(url, extract_images=extract_images)
-            slides = loaders.load_and_split()
-            self.pages.extend(slides)
+        self.pages = urls
 
         # Use match-case to select the vector DB type
         match vector_db_type:

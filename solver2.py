@@ -4,7 +4,7 @@ from getpass import getpass
 from typing import List
 
 from dotenv import load_dotenv
-from langchain.agents import create_react_agent, create_tool_calling_agent, AgentExecutor
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain.chat_models import init_chat_model
 from langchain_core.messages.tool import tool_call
 from langchain_core.tools import tool
@@ -16,6 +16,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableBranch, RunnableLambda
 from langchain_ibm import ChatWatsonx
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
 from blue_vector_db import BlueVectorDatabase
@@ -191,20 +192,18 @@ def get_info_from_knowledge_graph(question: str):
     Args:
         ''question'': The user question to be answered
     """
-    try:
-        structured_output = structured_retriever(question)
-    except Exception as e:
-        structured_output = []
-    try:
-        unstructured_output = unstructured_retriever.invoke(question)
-    except Exception as e:
-        unstructured_output = []
+    structured_output = structured_retriever(question)
+
+    unstructured_output = unstructured_retriever.invoke(question)
+
     return {
         "response_from_knowledge_graph": structured_output,
         "response_from_vector_db": unstructured_output
     }
 agent = create_tool_calling_agent(llm, tools=[get_info_from_knowledge_graph], prompt=final_prompt)
 executor = AgentExecutor(agent=agent, tools=[get_info_from_knowledge_graph])
+
+react = create_react_agent(model=llm, tools=[get_info_from_knowledge_graph])
 answer_generator_chain = ChatPromptTemplate.from_messages(
     [
         (
@@ -230,7 +229,7 @@ import json
 df = pd.read_csv("domande.csv", header=0, names=["domanda"])
 
 # Create or overwrite the results CSV file with headers
-with open("risultati1.csv", "w") as f:
+with open("risultati2_1.csv", "w") as f:
     f.write("row_id,result\n")
 # Load the dish mapping JSON file
 with open("dish_mapping.json", "r") as f:
@@ -240,19 +239,18 @@ map_json_lower = {key.lower(): value for key, value in map_json.items()}
 
 # Iterate over each row in the dataframe
 for index, row in df.iterrows():
-    input_data = {"question": row["domanda"], "messages": []}
-    output_ = executor.invoke(input_data)
+
+    input_data = {"messages": [("user", row["domanda"])]}
+    output_ = react.invoke(input_data)
     output = answer_generator_chain.invoke({"results": output_, "question": row["domanda"]})
 
     # Collect dish IDs
     dish_ids = []
     for dish in output.piatti:
-        dish_id = str(map_json_lower.get(dish.lower(), ""))
-        if dish_id is not None and dish_id != "":
-            dish_ids.append(dish_id)
+        dish_ids.append(str(map_json_lower.get(dish.lower(), "")))
     # Write the result to the results CSV file
     result = ",".join(dish_ids)
-    with open("risultati1.csv", "a") as f:
+    with open("risultati2_1.csv", "a") as f:
         f.write(f"{index},\"{result}\"\n")
 
     # print(output)

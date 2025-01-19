@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_neo4j import Neo4jGraph
+from marshmallow.fields import Boolean
 from neo4j.exceptions import ClientError
 from pydantic import Field, BaseModel
 
@@ -200,7 +201,7 @@ enrichment_prompt = ChatPromptTemplate.from_messages(
 
 enrichment_chain = enrichment_prompt | llm.with_structured_output(EnrichmentInfo)
 
-def load_file_documents_by_format(file: str, docs: list[Document], ref_path: Optional[str] = None) -> list:
+def load_file_documents_by_format(file: str, docs: list[Document], ref_path: Optional[str] = None, is_vector: Optional[bool] = False) -> list:
     file = ref_path + file if ref_path is not None else  "Menu/" + file
     if file.endswith(".txt") or file.endswith(".md"):
         loader = TextLoader(file)
@@ -222,6 +223,10 @@ def load_file_documents_by_format(file: str, docs: list[Document], ref_path: Opt
         else:
             print(file)
             shutil.copy(file, cleaned_pdf)
+        if is_vector:
+            loader = PyPDFLoader(cleaned_pdf)
+            info = loader.load()
+            return info
         loader = PyPDFLoader(cleaned_pdf)
         info = loader.load()
         if basename.startswith("Manuale di Cucina"):
