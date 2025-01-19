@@ -8,7 +8,9 @@ from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_neo4j import Neo4jGraph
+from langchain_openai import OpenAIEmbeddings
 
+from blue_vector_db import BlueVectorDatabase
 from ingestion import load_file_documents_by_format, create_knowledge_graph_schema, create_knowledge_graph, \
     enrich_graph_from_docs, add_docs, ExtractionInfo, EnrichmentInfo
 
@@ -38,6 +40,7 @@ load_dotenv()
 
 async def main():
     docs: List[Document] = []
+    urls = []
     if os.path.exists("docs_final_1.pickle"):
         print(f"Loading documents from pickle file...")
         docs = pickle.load(open("docs_final_1.pickle", "rb"))
@@ -45,6 +48,7 @@ async def main():
             print(f"Creating knowledge schema...")
             for doc in docs:
                 try:
+                    urls.append(doc)
                     # Try to parse page_content as JSON
                     info = None
                     try:
@@ -117,7 +121,7 @@ async def main():
             try:
                 if not is_valid_json(doc.page_content):
                     raise ValueError("Invalid JSON detected. Attempting to repair...")
-
+                urls.append(doc)
                 # Try to parse page_content as JSON
                 json_content = json.loads(doc.page_content)
                 # Clean the JSON from null/None values
@@ -147,6 +151,7 @@ async def main():
     else:
         print(f"Loading schema from pickle file...")
         schema = pickle.load(open("schema_final1.pickle", "rb"))
+    print(f"urls: {urls}")
     create_knowledge_graph(schema)
 
 
@@ -158,6 +163,13 @@ def clean_json(json_obj):
         return [clean_json(item) for item in json_obj if item is not None and item != "null"]
     else:
         return json_obj
+
+blue_vector_instance = BlueVectorDatabase()
+retriever = blue_vector_instance.create_vector_db(
+    index_path="./faiss_index",
+    embedding_model=OpenAIEmbeddings(),
+    urls=[]  # documenti da indicizzare
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
