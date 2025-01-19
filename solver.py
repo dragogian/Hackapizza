@@ -4,6 +4,7 @@ from getpass import getpass
 from typing import List
 
 from dotenv import load_dotenv
+from langchain.agents import create_react_agent, create_tool_calling_agent, AgentExecutor
 from langchain.chat_models import init_chat_model
 from langchain_core.messages.tool import tool_call
 from langchain_core.tools import tool
@@ -155,6 +156,35 @@ chain = (
     | prompt
     | llm_structured
 )
+final_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are a helpful assistant that can provide information from the knowledge graph."
+            "Think and generate a plan, then use the get_info_from_knowledge_graph tool to solve the queries!"
+        ),
+        (
+            "human",
+            "If you are not able to solve the query, answer with an empty list."
+        ),
+        # Placeholders fill up a **list** of messages
+        ("placeholder", "{agent_scratchpad}"),
+    ]
+)
+
+
+@tool("get_info_from_knowledge_graph")
+def get_info_from_knowledge_graph(question: str):
+    """
+    This tool retrieves information from the knowledge graph based on a user question
+    and returns the result in a structured format
+
+    Args:
+        ''question'': The user question to be answered
+    """
+    return structured_retriever(question)
+
+agent = create_react_agent(llm.with_structured_output(Response), tools=[get_info_from_knowledge_graph], prompt=final_prompt)
 
 # Step 6: Input data and run the chain
 import pandas as pd
@@ -175,7 +205,7 @@ map_json_lower = {key.lower(): value for key, value in map_json.items()}
 # Iterate over each row in the dataframe
 for index, row in df.iterrows():
     input_data = {"question": row["domanda"]}
-    output = chain.invoke(input_data)
+    output = agent.invoke(input_data)
 
     # Collect dish IDs
     dish_ids = []
@@ -194,29 +224,9 @@ for index, row in df.iterrows():
 # output = chain.invoke(input_data)
 # print(output)
 
-@tool
-def get_info_from_knowledge_graph(question: str):
-    """
-    This tool retrieves information from the knowledge graph based on a user question
-    and returns the result in a structured format
 
-    Args:
-        ''question'': The user question to be answered
-    """
-    return structured_retriever(question)
+agent = create_tool_calling_agent(llm.with_structured_output(Response), tools=[get_info_from_knowledge_graph], prompt=final_prompt)
+agent_executor = AgentExecutor(agent=agent, tools=[get_info_from_knowledge_graph])
 
-final_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are a helpful assistant that can provide information from the knowledge graph."
-            "Think and generate a plan, then use the get_info_from_knowledge_graph tool to solve the queries!"
-        ),
-        (
-            "human",
-            "If you are not able to solve the query, answer with an empty list."
-        )
-    ]
-)
 
-retrieval_chain = final_prompt | llm.with_structured_output(Response)
+retrieval_chain = final_prompt | agent

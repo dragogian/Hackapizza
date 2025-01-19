@@ -1,10 +1,10 @@
 import os.path
 import re
 import shutil
-from typing import Optional, List, Union
+from typing import Optional, List
 
 from dotenv import load_dotenv
-from langchain_community.document_loaders import PyPDFLoader, CSVLoader, JSONLoader, TextLoader, UnstructuredHTMLLoader
+from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader, UnstructuredHTMLLoader
 from langchain_community.graphs.graph_document import GraphDocument
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
@@ -20,7 +20,7 @@ from pdf_cleaner import clean_pdf
 kg_url = "neo4j://localhost:7687"
 kg_username = "neo4j"
 kg_password = "password"
-kg_db_name = "hackapizzaentire5"
+kg_db_name = "hackapizzaentire12"
 
 load_dotenv()
 graph_params = {
@@ -175,6 +175,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 
 extraction_chain = prompt | llm.with_structured_output(ExtractionInfo)
+#extraction_chain = prompt | llm | JsonOutputParser#.with_structured_output(ExtractionInfo)
 
 class EnrichmentInfo(BaseModel):
     pianeti: Optional[Pianeta] = Field(description="Info sul pianeta")
@@ -235,6 +236,16 @@ def load_file_documents_by_format(file: str, docs: list[Document], ref_path: Opt
         else:
             combined_content = "".join(doc.page_content for doc in info)
             info_doc = extraction_chain.invoke({"document": combined_content, "entities": graph_params["allowed_nodes"]})
+
+            def clean_json(json_obj):
+                """Recursively remove null/None values from a JSON object."""
+                if isinstance(json_obj, dict):
+                    return {k: clean_json(v) for k, v in json_obj.items() if v is not None and v != "null"}
+                elif isinstance(json_obj, list):
+                    return [clean_json(item) for item in json_obj if item is not None and item != "null"]
+                else:
+                    return json_obj
+            info_doc = clean_json(info_doc.dict())
             docs.append(Document(page_content=str(info_doc), source=file))
     elif file.endswith(".html"):
         loader = UnstructuredHTMLLoader(file)
@@ -247,6 +258,11 @@ def load_file_documents_by_format(file: str, docs: list[Document], ref_path: Opt
         return docs
     return docs
 
+additional_prompt = ChatPromptTemplate.from_template("""Questo è il contesto in cui ti trovi a creare il grafo: Nel Ciclo Cosmico 789, l’umanità ha superato i confini del sistema solare e delle dimensioni conosciute, dando vita a un multiverso ricco di culture e realtà intrecciate. In questo contesto, la gastronomia è un pilastro fondamentale che unisce specie diverse attraverso sapori e tradizioni interstellari.
+I ristoranti spaziano da sushi bar che servono creature interdimensionali a taverne che utilizzano ingredienti mistici come l’Erba Pipa, fino a moderni bistrot che creano piatti con sostanze aliene come lo Slurm. Ogni piatto deve tenere conto delle esigenze biologiche di centinaia di specie, ognuna con restrizioni alimentari uniche.
+La Federazione Galattica regola minuziosamente ogni aspetto della cucina intergalattica, monitorando ingredienti, tecniche e certificazioni per garantire la sicurezza alimentare e il rispetto delle normative multiversali. Gli chef non solo devono conoscere un vasto repertorio culinario, ma anche padroneggiare ingredienti che possono esistere in stati quantistici multipli o sfidare le leggi fisiche.
+Il simbolo supremo di questa era è la Pizza Cosmica, un piatto leggendario avvolto nel mistero. Realizzata con mozzarella ottenuta dalla Via Lattea e cotta con il calore di tre soli, è venerata come un’icona che fonde scienza, arte e mito, incarnando lo spirito stesso del multiverso culinario."""
+                                                     )
 async def create_knowledge_graph_schema(docs: list[Document]) -> list[GraphDocument]:
     graph_transformer = LLMGraphTransformer(llm=llm,
                                             allowed_nodes=graph_params["allowed_nodes"],
