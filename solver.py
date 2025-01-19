@@ -214,6 +214,9 @@ final_prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
+            "To better understand the graph supports the following Node Labels:\n<labels>\n{labels}\n</labels> and the following relationships:\n<relationships>{relationships}\n</relationships>."
+            "Node can have following properties:\n<properties>{properties}\n</properties>."
+            "Relationships can have following properties:\n<properties>{relationship_properties}\n</properties>."
             "If you are not able to solve the query, answer with an empty list."
         ),
     ]

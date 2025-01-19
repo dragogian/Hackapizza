@@ -44,16 +44,22 @@ async def main():
             print(f"Creating knowledge schema...")
             for doc in docs:
                 try:
-                    # Validate page_content to ensure it can be parsed as JSON
-                    if not doc.page_content.strip().startswith('{') or not doc.page_content.strip().endswith('}'):
-                        raise ValueError("Invalid JSON format: Truncated or malformed JSON")
-
                     # Try to parse page_content as JSON
-                    json_content = json.loads(doc.page_content)
-                    # Clean the JSON from null/None values
-                    cleaned_content = clean_json(json_content)
-                    # Convert back to a JSON string
-                    doc.page_content = json.dumps(cleaned_content)
+                    info = None
+                    try:
+                        info = ExtractionInfo.model_validate_json(doc.page_content)
+                    except Exception:
+                        pass
+                    try:
+                        info = EnrichmentInfo.model_validate_json(doc.page_content)
+                    except Exception:
+                        pass
+                    if info is not None:
+                        json_content = json.loads(info.model_dump_json())
+                        # Clean the JSON from null/None values
+                        cleaned_content = clean_json(json_content)
+                        # Convert back to a JSON string
+                        doc.page_content = json.dumps(cleaned_content)
                 except (json.JSONDecodeError, TypeError, ValueError) as e:
                     # Handle malformed JSON gracefully
                     print(f"Error processing document: {e}")
