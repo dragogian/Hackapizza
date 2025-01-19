@@ -104,29 +104,42 @@ async def main():
 
     if not os.path.exists("schema_final1.pickle"):
         print(f"Creating knowledge schema...")
-        for doc in docs:
-            evaluated_content = ast.literal_eval(doc.page_content)
+
+        def is_valid_json(json_string):
+            """Check if a string is valid JSON."""
             try:
+                json.loads(json_string)
+                return True
+            except json.JSONDecodeError:
+                return False
+
+        for doc in docs:
+            try:
+                if not is_valid_json(doc.page_content):
+                    raise ValueError("Invalid JSON detected. Attempting to repair...")
+
                 # Try to parse page_content as JSON
-                info = None
-                try:
-                    info = ExtractionInfo(**evaluated_content)
-                except Exception:
-                    pass
-                try:
-                    info = EnrichmentInfo(**evaluated_content)
-                except Exception:
-                    pass
-                if info is not None:
-                    # If it's an ExtractionInfo or EnrichmentInfo object, add it to the graph
-                    json_content = info.model_dump_json()
-                    # Clean the JSON from null/None values
+                json_content = json.loads(doc.page_content)
+                # Clean the JSON from null/None values
+                cleaned_content = clean_json(json_content)
+                # Convert back to a JSON string
+                doc.page_content = json.dumps(cleaned_content)
+            except (json.JSONDecodeError, ValueError) as e:
+                # Handle invalid JSON
+                print(f"Error: {e}. Document skipped or repaired.")
+                # Attempt to repair by removing trailing/leading characters (example heuristic)
+                doc.page_content = doc.page_content.strip().rstrip(",}]")
+                if is_valid_json(doc.page_content):
+                    json_content = json.loads(doc.page_content)
                     cleaned_content = clean_json(json_content)
-                    # Convert back to a JSON string
                     doc.page_content = json.dumps(cleaned_content)
-            except (json.JSONDecodeError, TypeError):
-                # If it's not JSON, just replace newlines with spaces
-                continue
+                else:
+                    # Fallback to replacing newlines if repair fails
+                    doc.page_content = doc.page_content.replace("\n", " ")
+            except TypeError as e:
+                # Handle non-string content
+                print(f"Type error: {e}")
+                doc.page_content = str(doc.page_content).replace("\n", " ")
         schema = await create_knowledge_graph_schema(docs)
         with open("schema_final1.pickle", "wb") as f:
             pickle.dump(schema, f)
