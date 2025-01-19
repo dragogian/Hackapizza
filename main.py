@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import json
 import os
@@ -104,20 +105,21 @@ async def main():
     if not os.path.exists("schema_final1.pickle"):
         print(f"Creating knowledge schema...")
         for doc in docs:
+            evaluated_content = ast.literal_eval(doc.page_content)
             try:
                 # Try to parse page_content as JSON
                 info = None
                 try:
-                    info = ExtractionInfo.model_validate_json(doc.page_content)
+                    info = ExtractionInfo(**evaluated_content)
                 except Exception:
                     pass
                 try:
-                    info = EnrichmentInfo.model_validate_json(doc.page_content)
+                    info = EnrichmentInfo(**evaluated_content)
                 except Exception:
                     pass
                 if info is not None:
                     # If it's an ExtractionInfo or EnrichmentInfo object, add it to the graph
-                    json_content = json.loads(info.model_dump_json())
+                    json_content = info.model_dump_json()
                     # Clean the JSON from null/None values
                     cleaned_content = clean_json(json_content)
                     # Convert back to a JSON string

@@ -210,15 +210,12 @@ final_prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             "You are a helpful assistant that can provide information from the knowledge graph."
-            "Use the get_info_from_knowledge_graph tool to solve the queries. Always remember to write case insensitive Cypher queries.!"
+            "Think and generate a plan, then use the get_info_from_knowledge_graph tool to solve the queries!"
         ),
         (
             "human",
-            "To better understand the graph supports the following Node Labels:\n<labels>\n{labels}\n</labels> and the following relationships:\n<relationships>{relationships}\n</relationships>."
-            "Node can have following properties:\n<properties>{properties}\n</properties>."
-            "Relationships can have following properties:\n<properties>{relationship_properties}\n</properties>."
             "If you are not able to solve the query, answer with an empty list."
-        ),
+        )
     ]
 )
 
