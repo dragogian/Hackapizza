@@ -30,17 +30,17 @@ graph_params = {
     "Licenza",
     "Ordine"
   ],
-  "allowed_relationships": [
-    "(Piatto, CONTIENE_INGREDIENTE, Ingrediente)",
-    "(Piatto, APPLICA_TECNICA, Tecnica)",
-    "(Piatto, SERVITO_IN, Ristorante)",
-    "(Ristorante, LOCALIZZATO_SU, Pianeta)",
-    "(Piatto, PREPARATO_DA, Chef)",
-    "(Chef, HA_LICENZA, Licenza)",
-    "(Chef, APPARTIENE_ORDINE, Ordine)",
-    "(Ordine, ORDINE_AUTORIZZA, Piatto)"
-  ],
-  "node_properties": [
+"allowed_relationships" : [
+    ("Piatto", "CONTIENE_INGREDIENTE", "Ingrediente"),
+    ("Piatto", "APPLICA_TECNICA", "Tecnica"),
+    ("Piatto", "SERVITO_IN", "Ristorante"),
+    ("Ristorante", "LOCALIZZATO_SU", "Pianeta"),
+    ("Piatto", "PREPARATO_DA", "Chef"),
+    ("Chef", "HA_LICENZA", "Licenza"),
+    ("Chef", "APPARTIENE_ORDINE", "Ordine"),
+    ("Ordine", "ORDINE_AUTORIZZA", "Piatto"),
+],
+"node_properties": [
     "coordinate",
     "descrizione",
     "livelloLicenza",
@@ -62,99 +62,20 @@ graph_params = {
   ]
 }
 
-# graph_params = {
-#   "allowed_nodes": [
-#     "Piatto",
-#     "INGREDIENTE",
-#     "TECNICA",
-#     "RISTORANTE",
-#     "PIANETA",
-#     "CHEF",
-#     "LICENZA",
-#     "ORDINE"
-#   ],
-#   "allowed_relationship": [
-#     ("Piatto", "CONTIENTE_INGREDIENTE", "INGREDIENTE"),
-#     ("Piatto", "USA_TECNICA", "TECNICA"),
-#     ("Piatto", "SERVITO_IN", "RISTORANTE"),
-#     ("RISTORANTE", "SI_TROVA_SU", "PIANETA"),
-#     ("TECNICA", "RICHIEDE_LICENZA", "LICENZA"),
-#     ("CHEF", "HA_LICENZA", "LICENZA"),
-#     ("CHEF", "APPARTIENE_A_ORDINE", "ORDINE"),
-#     ("CHEF", "MEMBRO_DI_ORDINE", "ORDINE")
-#   ],
-#   "node_properties": [
-#     "nome",
-#     "descrizione",
-#     "eLeggendario",
-#     "gradoChefRichiesto",
-#     "quantitaMassimaConsentita",
-#     "esotico",
-#     "multiDimensionale",
-#     "richiedeGestioneSpeciale",
-#     "categoria",
-#     "licenzaRichiesta",
-#     "fonteEnergia",
-#     "eMultiReale",
-#     "livelloLicenzaChef",
-#     "distanzaDaRiferimento",
-#     "coordinateGalattiche",
-#     "regioneGalattica",
-#     "coordinate",
-#     "livelloDimensionale",
-#     "licenzeChef",
-#     "appartenenzaOrdine",
-#     "specializzazioni",
-#     "tipoLicenza",
-#     "gradoLicenza",
-#     "licenzaTemporale",
-#     "licenzaPsionica",
-#     "requisitiIngresso"
-#   ],
-#   "relationship_properties": [
-#     "quantita",
-#     "unitaDiMisura",
-#     "ingredienteFondamentale",
-#     "conformeCodiceGalattico",
-#     "chefConLicenzaAdeguata",
-#     "attrezzaturaSpeciale",
-#     "livelloEsecuzione",
-#     "disponibilitaStagionale",
-#     "menuSpeciale",
-#     "inServizioDal",
-#     "distanzaDalCentro",
-#     "accessibilita",
-#     "allineamentoDimensionale",
-#     "gradoMinimo",
-#     "tipoLicenzaSpecifico",
-#     "motivazione",
-#     "gradoPosseduto",
-#     "dataConseguimento",
-#     "validaFinoAl",
-#     "livelloDiAppartenenza",
-#     "dataAdesione"
-#   ]
-# }
-
-
 def load_file_documents_by_format(file: str, docs: list[Document]) -> list:
     file = "resources/" + file
     if file.endswith(".txt") or file.endswith(".md"):
         loader = TextLoader(file)
         docs.extend(loader.load_and_split())
-    # elif file.endswith(".json"):
-    #     loader = JSONLoader(file, ".", text_content=False)
-    #     docs.extend(loader.load_and_split())
     elif file.endswith(".csv"):
         loader = CSVLoader(file)
-        docs.extend(loader.load())
+        docs.extend(loader.load_and_split())
     elif file.endswith(".pdf"):
         basename = os.path.basename(file).split(".")[0]
         cleaned_pdf = "resources_cleaned/" + basename + "_cleaned.pdf"
         if basename.startswith("Datapizza") or basename.startswith("Codice Galattico"):
             clean_pdf(file, cleaned_pdf)
         else:
-            print(file)
             shutil.copy(file, cleaned_pdf)
         loader = PyPDFLoader(cleaned_pdf)
         docs.extend(loader.load_and_split())
@@ -171,7 +92,8 @@ async def create_knowledge_graph_schema(docs: list[Document]) -> list[GraphDocum
                                             allowed_nodes=graph_params["allowed_nodes"],
                                             allowed_relationships=graph_params["allowed_relationships"],
                                             node_properties=graph_params["node_properties"],
-                                            relationship_properties=graph_params["relationship_properties"]
+                                            relationship_properties=graph_params["relationship_properties"],
+                                            prompt=""
                                             )
     return await graph_transformer.aconvert_to_graph_documents(docs)
 

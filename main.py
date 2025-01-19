@@ -1,9 +1,7 @@
 import asyncio
 import os
 import pickle
-
 from dotenv import load_dotenv
-
 from ingestion import load_file_documents_by_format, create_knowledge_graph_schema, create_knowledge_graph
 
 load_dotenv()
@@ -21,7 +19,7 @@ async def main():
         docs = pickle.load(open("docs.pickle", "rb"))
     print(f"Creating knowledge graph schema with loaded documents...")
     if not os.path.exists("schema.pickle"):
-        schema = await create_knowledge_graph_schema(docs)
+        schema = await create_knowledg  e_graph_schema(docs)
         with open("schema.pickle", "wb") as f:
             pickle.dump(schema, f)
         print(f"Creating knowledge graph with schema: \n {schema} \n")

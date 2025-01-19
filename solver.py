@@ -2,7 +2,6 @@ import json
 import os
 from getpass import getpass
 from typing import List
-
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_community.graphs import Neo4jGraph
@@ -14,7 +13,6 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 from langchain_ibm import ChatWatsonx
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from pydantic import BaseModel, Field
-
 from ingestion import graph_params
 from llm import llm
 
@@ -34,10 +32,19 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            f"You have to extract one of the following entities:\n <entities>\n{graph_params["allowed_nodes"]}\n<7entities> from the user question."
-            f"For example, for a question like 'Qual è il piatto più famoso di Marte?' you should extract as entity: 'Piatto'."
-            f"For example, for a question like 'Quali piatti hanno carne di kraken?' you should extract as entity: 'Ingrediente'."
-            f"For example, for a question like 'Quali piatti sono serviti dal ristorante 'La Tana del Lupo'?' you should extract as entity: 'Ristorante'.",
+            (
+                "Your task is to identify one of the following entities based on the user's question:\n"
+                f"<entities>\n{graph_params['allowed_nodes']}\n</entities>\n"
+                "The entity you extract should match the focus of the user's question. Here are some examples:\n\n"
+                "1. Question: 'Qual è il piatto più famoso di Marte?'\n"
+                "   Extracted entity: 'Piatto'\n\n"
+                "2. Question: 'Quali piatti hanno carne di kraken?'\n"
+                "   Extracted entity: 'Ingrediente'\n\n"
+                "3. Question: 'Quali piatti sono serviti dal ristorante \"La Tana del Lupo\"?'\n"
+                "   Extracted entity: 'Ristorante'\n\n"
+                "Make sure to select only one entity per question and focus on the most relevant one."
+            )
+
         ),
         (
             "human",
@@ -60,7 +67,7 @@ entity_chain = prompt | llm.with_structured_output(Entities)
 kg_url = "neo4j://localhost:7687"
 kg_username = "neo4j"
 kg_password = "password"
-kg_db_name = "hackapizzagptfixed"
+kg_db_name = "hackapizzafinal"
 graph_db = Neo4jGraph(url=kg_url, username=kg_username, password=kg_password, database=kg_db_name)
 
 graph_db.query(
@@ -109,7 +116,7 @@ def structured_retriever(question: str):
         "question": question,
         "entity": entity.names,
         "labels": graph_params["allowed_nodes"],
-        "relationships": graph_params["allowed_relationship"],
+        "relationships": graph_params["allowed_relationships"],
     })
     result = graph_db.query(query.query)
     return result
@@ -175,6 +182,41 @@ chain = (
 
     # print(output)
 
-input_data = {"question": "Quali piatti contengono carne di kraken?"}  # Example input
-output = chain.invoke(input_data)
-print(output)
+#input_data = {"question": "Quali piatti contengono carne di kraken?"}  # Example input
+#output = chain.invoke(input_data)
+#print(output)
+# Step 6: Input data and run the chain
+import pandas as pd
+import json
+
+# Read the CSV file without headers
+df = pd.read_csv("domande.csv", header=0, names=["domanda"])
+
+# Create or overwrite the results CSV file with headers
+with open("risultati.csv", "w") as f:
+    f.write("row_id,result\n")
+
+    # Load the dish mapping JSON file
+with open("dish_mapping.json", "r") as f:
+    map_json = json.load(f)
+    map_json_lower = {key.lower(): value for key, value in map_json.items()}
+# Iterate over each row in the dataframe
+output_final = []
+for index, row in df.iterrows():
+
+    input_data = {"question": row["domanda"]}
+    output = chain.invoke(input_data)
+    # Collect dish IDs
+    dish_ids = []
+    for dish in output.piatti:
+        try:
+           # Assuming 'id' is the column name
+            dish_ids.append(str(map_json_lower[dish.lower()]))
+        except Exception as e:
+            print("Errore: "+str(e))
+    output_final.append((index, str(','.join(dish_ids))))
+    #print(output_final)
+    #if index==10:
+    output_final_df = pd.DataFrame(output_final,columns=["row_id", "result"])
+    output_final_df.to_csv("risultati.csv", index=False)
+    #    break
