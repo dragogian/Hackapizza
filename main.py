@@ -8,7 +8,9 @@ from typing import List
 from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_neo4j import Neo4jGraph
+from langchain_openai import OpenAIEmbeddings
 
+from blue_vector_db import BlueVectorDatabase
 from ingestion import load_file_documents_by_format, create_knowledge_graph_schema, create_knowledge_graph, \
     enrich_graph_from_docs, add_docs, ExtractionInfo, EnrichmentInfo
 
@@ -38,13 +40,19 @@ load_dotenv()
 
 async def main():
     docs: List[Document] = []
+<<<<<<< HEAD
     if os.path.exists("docs_final_12.pickle"):
+=======
+    urls = []
+    if os.path.exists("docs_final_1.pickle"):
+>>>>>>> 13d2d3ccf6f76fbf72381f66bdb91c1f56b849ee
         print(f"Loading documents from pickle file...")
         docs = pickle.load(open("docs_final_12.pickle", "rb"))
         if not os.path.exists("schema_final12.pickle"):
             print(f"Creating knowledge schema...")
             for doc in docs:
                 try:
+                    urls.append(doc)
                     # Try to parse page_content as JSON
                     info = None
                     try:
@@ -104,13 +112,57 @@ async def main():
 
     if not os.path.exists("schema_final121.pickle"):
         print(f"Creating knowledge schema...")
+<<<<<<< HEAD
+=======
+
+        def is_valid_json(json_string):
+            """Check if a string is valid JSON."""
+            try:
+                json.loads(json_string)
+                return True
+            except json.JSONDecodeError:
+                return False
+
+        for doc in docs:
+            try:
+                if not is_valid_json(doc.page_content):
+                    raise ValueError("Invalid JSON detected. Attempting to repair...")
+                urls.append(doc)
+                # Try to parse page_content as JSON
+                json_content = json.loads(doc.page_content)
+                # Clean the JSON from null/None values
+                cleaned_content = clean_json(json_content)
+                # Convert back to a JSON string
+                doc.page_content = json.dumps(cleaned_content)
+            except (json.JSONDecodeError, ValueError) as e:
+                # Handle invalid JSON
+                print(f"Error: {e}. Document skipped or repaired.")
+                # Attempt to repair by removing trailing/leading characters (example heuristic)
+                doc.page_content = doc.page_content.strip().rstrip(",}]")
+                if is_valid_json(doc.page_content):
+                    json_content = json.loads(doc.page_content)
+                    cleaned_content = clean_json(json_content)
+                    doc.page_content = json.dumps(cleaned_content)
+                else:
+                    # Fallback to replacing newlines if repair fails
+                    doc.page_content = doc.page_content.replace("\n", " ")
+            except TypeError as e:
+                # Handle non-string content
+                print(f"Type error: {e}")
+                doc.page_content = str(doc.page_content).replace("\n", " ")
+>>>>>>> 13d2d3ccf6f76fbf72381f66bdb91c1f56b849ee
         schema = await create_knowledge_graph_schema(docs)
         with open("schema_final121.pickle", "wb") as f:
             pickle.dump(schema, f)
         print(f"Creating knowledge graph with schema: \n {schema} \n")
     else:
         print(f"Loading schema from pickle file...")
+<<<<<<< HEAD
         schema = pickle.load(open("schema_final121.pickle", "rb"))
+=======
+        schema = pickle.load(open("schema_final1.pickle", "rb"))
+    print(f"urls: {urls}")
+>>>>>>> 13d2d3ccf6f76fbf72381f66bdb91c1f56b849ee
     create_knowledge_graph(schema)
 
 
@@ -122,6 +174,13 @@ def clean_json(json_obj):
         return [clean_json(item) for item in json_obj if item is not None and item != "null"]
     else:
         return json_obj
+
+blue_vector_instance = BlueVectorDatabase()
+retriever = blue_vector_instance.create_vector_db(
+    index_path="./faiss_index",
+    embedding_model=OpenAIEmbeddings(),
+    urls=[]  # documenti da indicizzare
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
